@@ -1,0 +1,2333 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Growbots ROI Calculator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+            padding: 30px 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+
+        body.hide-header header {
+            display: none;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: #8892b0;
+            font-size: 1rem;
+        }
+
+        .disclaimer {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            border-radius: 6px;
+            padding: 8px 16px;
+            margin-top: 12px;
+            font-size: 0.75rem;
+            color: #ffc107;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Step indicator */
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 15px;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #8892b0;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .step:hover {
+            color: #00d9ff;
+        }
+
+        .step.active {
+            color: #00d9ff;
+        }
+
+        .step.completed {
+            color: #00ff88;
+        }
+
+        .step-number {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid currentColor;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .step.completed .step-number {
+            background: #00ff88;
+            border-color: #00ff88;
+            color: #1a1a2e;
+        }
+
+        /* Screen containers */
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Step 1: Metrics */
+        .metrics-screen {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 15px;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            color: #ccd6f6;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Input Fields */
+        .input-group {
+            margin-bottom: 10px;
+        }
+
+        .input-group:last-of-type {
+            margin-bottom: 0;
+        }
+
+        .input-group label {
+            display: block;
+            color: #ccd6f6;
+            margin-bottom: 6px;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .input-group .hint {
+            color: #8892b0;
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-wrapper input[type="number"],
+        .input-wrapper input[type="text"] {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 12px 16px 12px 35px;
+            color: #fff;
+            font-size: 1rem;
+        }
+
+        .input-wrapper input:focus {
+            outline: none;
+            border-color: #00d9ff;
+        }
+
+        .input-wrapper .prefix {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #8892b0;
+        }
+
+        /* Slider */
+        .slider-container input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            appearance: none;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        .slider-container input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00d9ff, #00ff88);
+            cursor: pointer;
+        }
+
+        /* Buttons */
+        .btn-primary {
+            width: 100%;
+            padding: 14px 24px;
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            border: none;
+            border-radius: 8px;
+            color: #1a1a2e;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 25px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 217, 255, 0.3);
+        }
+
+        .btn-secondary {
+            padding: 12px 24px;
+            background: transparent;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #ccd6f6;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            border-color: #00d9ff;
+            color: #00d9ff;
+        }
+
+        .btn-print {
+            width: 100%;
+            padding: 12px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #ccd6f6;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: all 0.2s;
+        }
+
+        .btn-print:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        @media print {
+            body {
+                background: white !important;
+                color: black !important;
+                padding: 20px;
+            }
+
+            .step-indicator,
+            .back-link,
+            .btn-print {
+                display: none !important;
+            }
+
+            .container {
+                max-width: 100%;
+            }
+
+            .screen {
+                display: block !important;
+                page-break-after: always;
+            }
+
+            .screen#screen1 {
+                display: none !important;
+            }
+
+            .results-grid,
+            .step2-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .chart-card,
+            .final-proposal,
+            .card,
+            .roi-card {
+                background: #f5f5f5 !important;
+                border: 1px solid #ddd !important;
+                color: black !important;
+            }
+
+            .roi-value,
+            .chart-title,
+            .card-title {
+                color: #333 !important;
+            }
+
+            .swift-decision-promo {
+                background: #fff8e1 !important;
+                border-color: #ffc107 !important;
+            }
+        }
+
+        /* Step 2: Plan Selection - Compact Layout */
+        .plan-screen {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 1000px) {
+            .plan-screen {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Left side - Selection */
+        .selection-side {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* Metrics summary bar */
+        .metrics-bar {
+            background: rgba(0, 217, 255, 0.05);
+            border: 1px solid rgba(0, 217, 255, 0.2);
+            border-radius: 8px;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+        }
+
+        .metrics-bar-values {
+            display: flex;
+            gap: 20px;
+            color: #8892b0;
+        }
+
+        .metrics-bar-values strong {
+            color: #00ff88;
+        }
+
+        .metrics-bar-edit {
+            color: #00d9ff;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        /* Contract toggle - compact */
+        .contract-section {
+            display: flex;
+            gap: 6px;
+        }
+
+        .contract-option {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .contract-option:hover {
+            border-color: rgba(0, 217, 255, 0.3);
+        }
+
+        .contract-option.selected {
+            border-color: #00d9ff;
+            background: rgba(0, 217, 255, 0.1);
+        }
+
+        .contract-option .term {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #ccd6f6;
+        }
+
+        .contract-option .discount {
+            font-size: 0.75rem;
+            color: #8892b0;
+            margin-top: 2px;
+        }
+
+        .contract-option.selected .discount {
+            color: #00ff88;
+        }
+
+        /* Plan options - horizontal compact */
+        .plan-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .plan-option {
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .plan-option:hover {
+            border-color: rgba(0, 217, 255, 0.3);
+        }
+
+        .plan-option.selected {
+            border-color: #00d9ff;
+            background: rgba(0, 217, 255, 0.1);
+        }
+
+        .plan-option-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .plan-radio {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .plan-option.selected .plan-radio {
+            border-color: #00d9ff;
+        }
+
+        .plan-option.selected .plan-radio::after {
+            content: '';
+            width: 10px;
+            height: 10px;
+            background: #00d9ff;
+            border-radius: 50%;
+        }
+
+        .plan-info h4 {
+            font-size: 0.95rem;
+            color: #ccd6f6;
+            margin-bottom: 2px;
+        }
+
+        .plan-info .leads {
+            font-size: 0.8rem;
+            color: #8892b0;
+        }
+
+        .plan-price {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #00ff88;
+        }
+
+        .plan-badge {
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            color: #1a1a2e;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        /* Pricing Table - Column Layout */
+        .pricing-table-container {
+            /* overflow visible to show recommended badge */
+            overflow: visible;
+        }
+
+        .pricing-columns {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+        }
+
+        .plan-column {
+            padding: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .plan-column:hover {
+            background: rgba(0, 217, 255, 0.05);
+        }
+
+        .plan-column.selected {
+            background: rgba(0, 217, 255, 0.1);
+            border-color: #00d9ff;
+        }
+
+        .plan-column.recommended {
+            /* Border handled by .selected */
+            /* Badge handling only */
+            margin-top: 0;
+        }
+
+        .plan-column-header {
+            text-align: center;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 8px;
+        }
+
+        .plan-column-name {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #ccd6f6;
+            margin-bottom: 5px;
+        }
+
+        .plan-column.selected .plan-column-name {
+            color: #00d9ff;
+        }
+
+        .plan-column-price {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #00ff88;
+        }
+
+        .plan-column-price span {
+            font-size: 0.8rem;
+            font-weight: 400;
+            color: #8892b0;
+        }
+
+        .recommended-badge {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            color: #1a1a2e;
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            white-space: nowrap;
+            z-index: 10;
+        }
+
+        .plan-features {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .plan-feature {
+            font-size: 0.7rem;
+            color: #ccd6f6;
+            text-align: center;
+            padding: 5px 3px;
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 4px;
+        }
+
+        .plan-feature.highlight {
+            color: #00d9ff;
+            font-weight: 600;
+            background: rgba(0, 217, 255, 0.1);
+        }
+
+        .plan-feature.unavailable {
+            color: #555;
+            font-style: italic;
+        }
+
+        .feature-labels {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .feature-label {
+            font-size: 0.75rem;
+            color: #8892b0;
+            padding: 8px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Add-on compact */
+        .addons-card {
+            margin-top: 10px;
+        }
+
+        .addons-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .addon-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 8px 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .addon-row:hover {
+            border-color: rgba(0, 217, 255, 0.3);
+        }
+
+        .addon-row.selected {
+            border-color: #00d9ff;
+            background: rgba(0, 217, 255, 0.1);
+        }
+
+        .addon-row-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .addon-checkbox {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .addon-row.selected .addon-checkbox {
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            border-color: transparent;
+        }
+
+        .addon-row.selected .addon-checkbox::after {
+            content: '✓';
+            color: #1a1a2e;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .addon-text {
+            font-size: 0.85rem;
+            color: #ccd6f6;
+        }
+
+        .addon-desc {
+            font-size: 0.75rem;
+            color: #8892b0;
+        }
+
+        .addon-price {
+            color: #00ff88;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        /* Right side - ROI Summary */
+        .roi-side {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .roi-card {
+            background: linear-gradient(135deg, rgba(0, 217, 255, 0.08) 0%, rgba(0, 255, 136, 0.05) 100%);
+            border: 1px solid rgba(0, 217, 255, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .roi-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .roi-item {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .roi-item.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .roi-label {
+            font-size: 0.75rem;
+            color: #8892b0;
+            margin-bottom: 4px;
+        }
+
+        .roi-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .roi-value.highlight {
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .roi-subtext {
+            font-size: 0.7rem;
+            color: #8892b0;
+            margin-top: 2px;
+        }
+
+        .proposal-badge {
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+            color: #1a1a2e;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .proposal-badge.secondary {
+            background: rgba(255, 255, 255, 0.15);
+            color: #ccd6f6;
+        }
+
+        /* Accept button */
+        .accept-section {
+            margin-top: 15px;
+        }
+
+        /* Swift Decision Promo */
+        .swift-decision-promo {
+            background: linear-gradient(135deg, rgba(255, 193, 7, 0.15) 0%, rgba(255, 152, 0, 0.1) 100%);
+            border: 2px solid rgba(255, 193, 7, 0.4);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .swift-decision-promo.disabled {
+            opacity: 0.5;
+            border-color: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .swift-promo-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .swift-promo-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            color: #ffc107;
+            font-size: 0.9rem;
+        }
+
+        .swift-decision-promo.disabled .swift-promo-title {
+            color: #8892b0;
+        }
+
+        .swift-promo-badge {
+            background: linear-gradient(90deg, #ffc107, #ff9800);
+            color: #1a1a2e;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.65rem;
+            font-weight: 700;
+        }
+
+        .swift-promo-desc {
+            font-size: 0.8rem;
+            color: #ccd6f6;
+            margin-bottom: 10px;
+        }
+
+        .swift-decision-promo.disabled .swift-promo-desc {
+            color: #8892b0;
+        }
+
+        .swift-promo-deadline {
+            font-size: 0.75rem;
+            color: #ffc107;
+            font-weight: 500;
+        }
+
+        .swift-decision-promo.disabled .swift-promo-deadline {
+            color: #8892b0;
+        }
+
+        .swift-promo-savings {
+            background: rgba(0, 255, 136, 0.15);
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .swift-decision-promo.disabled .swift-promo-savings {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .swift-savings-label {
+            font-size: 0.75rem;
+            color: #8892b0;
+        }
+
+        .swift-savings-value {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #00ff88;
+        }
+
+        .swift-decision-promo.disabled .swift-savings-value {
+            color: #8892b0;
+            text-decoration: line-through;
+        }
+
+        /* AE Toggle Switch */
+        .ae-toggle-section {
+            background: rgba(0, 217, 255, 0.05);
+            border: 1px dashed rgba(0, 217, 255, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .ae-toggle-label {
+            font-size: 0.8rem;
+            color: #8892b0;
+        }
+
+        .ae-toggle-label strong {
+            color: #00d9ff;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 48px;
+            height: 26px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 13px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: linear-gradient(90deg, #00d9ff, #00ff88);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(22px);
+        }
+
+        /* Step 3: Results with Chart */
+        .results-screen {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 25px;
+        }
+
+        @media (max-width: 900px) {
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Chart section */
+        .chart-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            min-height: 420px;
+        }
+
+        .chart-title {
+            font-size: 1.1rem;
+            color: #ccd6f6;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .chart-subtitle {
+            font-size: 0.85rem;
+            color: #8892b0;
+            margin-bottom: 25px;
+        }
+
+        .chart-container {
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            min-height: 280px;
+        }
+
+        .chart-bars {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            flex: 1;
+            padding: 35px 15px 0 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            min-height: 280px;
+        }
+
+        .chart-bar-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+        }
+
+        .chart-bar {
+            width: 30px;
+            background: linear-gradient(180deg, #00d9ff, #00ff88);
+            border-radius: 4px 4px 0 0;
+            transition: height 0.5s ease;
+            position: relative;
+        }
+
+        .chart-bar.ramp {
+            background: linear-gradient(180deg, rgba(0, 217, 255, 0.5), rgba(0, 255, 136, 0.3));
+        }
+
+        .chart-bar-value {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.75rem;
+            color: #ccd6f6;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+
+        .chart-bar-label {
+            font-size: 0.7rem;
+            color: #8892b0;
+            margin-top: 8px;
+        }
+
+        .chart-legend {
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            margin-top: 15px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: #8892b0;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+
+        .legend-dot.ramp {
+            background: rgba(0, 217, 255, 0.5);
+        }
+
+        .legend-dot.full {
+            background: linear-gradient(180deg, #00d9ff, #00ff88);
+        }
+
+        /* Final proposal card */
+        .final-proposal {
+            background: linear-gradient(135deg, rgba(0, 217, 255, 0.1) 0%, rgba(0, 255, 136, 0.05) 100%);
+            border: 1px solid rgba(0, 217, 255, 0.3);
+            border-radius: 12px;
+            padding: 25px;
+        }
+
+        .final-proposal-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .final-proposal-header h3 {
+            font-size: 1.1rem;
+            color: #ccd6f6;
+            margin-bottom: 8px;
+        }
+
+        .final-badges {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .final-payment-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .final-payment-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .final-payment-label {
+            font-size: 0.75rem;
+            color: #8892b0;
+            margin-bottom: 5px;
+        }
+
+        .final-payment-amount {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #00d9ff;
+        }
+
+        .final-payment-detail {
+            font-size: 0.7rem;
+            color: #8892b0;
+            margin-top: 3px;
+        }
+
+        .final-roi-row {
+            display: flex;
+            justify-content: space-around;
+            padding: 15px 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 15px;
+        }
+
+        .final-roi-item {
+            text-align: center;
+        }
+
+        .final-roi-label {
+            font-size: 0.7rem;
+            color: #8892b0;
+            margin-bottom: 3px;
+        }
+
+        .final-roi-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #00ff88;
+        }
+
+        .back-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .back-link a {
+            color: #8892b0;
+            font-size: 0.85rem;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .back-link a:hover {
+            color: #00d9ff;
+        }
+
+        .note-text {
+            text-align: center;
+            font-size: 0.75rem;
+            color: #8892b0;
+            font-style: italic;
+        }
+
+        /* Comparison Modal Styles */
+        .btn-compare {
+            width: 100%;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #ccd6f6;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            margin: 15px 0;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-compare:hover {
+            border-color: #00d9ff;
+            color: #00d9ff;
+            background: rgba(0, 217, 255, 0.05);
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 20, 0.9);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background: #1a1a2e;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            width: 100%;
+            max-width: 850px;
+            position: relative;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-size: 1.2rem;
+            color: #fff;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: #8892b0;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .close-modal:hover {
+            color: #fff;
+        }
+
+        .modal-body {
+            padding: 15px 20px;
+            overflow-x: auto;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: #ccd6f6;
+        }
+
+        .comparison-table th {
+            color: #8892b0;
+            font-weight: 500;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .comparison-table .growbots-col {
+            background: rgba(0, 217, 255, 0.05);
+            border-left: 1px solid #00d9ff;
+            border-right: 1px solid #00d9ff;
+            position: relative;
+        }
+
+        .comparison-table .section-header td {
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            font-weight: 600;
+            padding: 10px 15px;
+            font-size: 0.85rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Adjust borders for highlighted column with section headers */
+        .comparison-table .growbots-col {
+            background: rgba(0, 217, 255, 0.05);
+            border-left: 1px solid #00d9ff;
+            border-right: 1px solid #00d9ff;
+            position: relative;
+        }
+
+        .comparison-table tr.section-header td {
+            border-left: none;
+            border-right: none;
+            background: rgba(255, 255, 255, 0.08);
+            /* Slightly lighter than sections */
+        }
+
+        /* Reset border radius for all, then apply to top/bottom of valid chunks? */
+        /* Simplification: Just allow the border to be straight for now, or handle specifically */
+        .comparison-table tr:first-child .growbots-col {
+            border-top: none;
+            /* Header has it */
+        }
+
+        .comparison-table thead th.growbots-col {
+            border-top: 1px solid #00d9ff;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .comparison-table tbody tr:last-child .growbots-col {
+            border-bottom: 1px solid #00d9ff;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .comparison-table .growbots-header {
+            color: #00d9ff;
+            font-weight: 700;
+        }
+
+        .comparison-table .metric-col {
+            font-weight: 600;
+            color: #fff;
+            width: 20%;
+        }
+
+        .modal-footer {
+            padding: 15px 25px;
+            background: rgba(0, 0, 0, 0.2);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            text-align: center;
+            font-size: 0.8rem;
+            color: #8892b0;
+            border-radius: 0 0 12px 12px;
+        }
+
+        .positive-attr {
+            color: #00d9ff;
+            font-weight: 700;
+        }
+
+        @media (max-width: 768px) {
+            .comparison-table {
+                min-width: 600px;
+                /* Force scroll on mobile */
+            }
+        }
+
+        /* Export Container Styles */
+        #proposal-export-container {
+            position: absolute;
+            left: -9999px;
+            top: 0;
+            width: 1200px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            padding: 40px;
+            color: white;
+            z-index: -1;
+        }
+
+        .export-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .export-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .export-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .export-grid>div {
+            transform: none !important;
+            animation: none !important;
+        }
+
+        .export-footer {
+            margin-top: 30px;
+            text-align: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 20px;
+        }
+
+        /* Hide specific elements during export */
+        #proposal-export-container .btn-primary,
+        #proposal-export-container .btn-secondary,
+        #proposal-export-container .btn-print,
+        #proposal-export-container .back-link,
+        #proposal-export-container .metrics-bar-edit,
+        #proposal-export-container #edit-metrics,
+        #proposal-export-container .ae-toggle-section,
+        #proposal-export-container #swift-toggle,
+        #proposal-export-container #trigger-compare {
+            display: none !important;
+        }
+
+        /* Fix export rendering for gradient text */
+        #proposal-export-container h1,
+        #proposal-export-container .roi-value.highlight,
+        #proposal-export-container .positive-attr,
+        #proposal-export-container .proposal-badge {
+            background: none !important;
+            -webkit-background-clip: border-box !important;
+            background-clip: border-box !important;
+            -webkit-text-fill-color: initial !important;
+            color: #00d9ff !important;
+        }
+
+        /* Specific colors for export */
+        #proposal-export-container .roi-value.highlight {
+            color: #00ff88 !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Growbots ROI Calculator</h1>
+            <p class="subtitle">Calculate your potential return on investment</p>
+            <div class="disclaimer">
+                *Projections based on average results from successful customers. Individual results may vary based on
+                industry, target market, and sales process.
+            </div>
+        </header>
+
+        <!-- Step Indicator -->
+        <div class="step-indicator">
+            <div class="step active" id="step1-ind">
+                <div class="step-number">1</div>
+                <span>Your Metrics</span>
+            </div>
+            <div class="step" id="step2-ind">
+                <div class="step-number">2</div>
+                <span>Choose Plan</span>
+            </div>
+            <div class="step" id="step3-ind">
+                <div class="step-number">3</div>
+                <span>Your Proposal</span>
+            </div>
+        </div>
+
+        <!-- STEP 1: Metrics Input -->
+        <div class="screen active" id="screen1">
+            <div class="metrics-screen">
+                <div class="card">
+                    <div class="card-title">📊 Tell us about your business</div>
+
+                    <div class="input-group">
+                        <label>Company Name</label>
+                        <div class="hint">For your personalized proposal</div>
+                        <div class="input-wrapper">
+                            <span class="prefix">@</span>
+                            <input type="text" id="company-input" placeholder="Your Company Name">
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Average Contract Value (ACV)</label>
+                        <div class="hint">Your typical annual deal size</div>
+                        <div class="input-wrapper">
+                            <span class="prefix">$</span>
+                            <input type="number" id="acv-input" value="10000" min="1000" step="1000">
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Win Rate: <span id="winrate-display-1">10%</span></label>
+                        <div class="hint">Percentage of leads that become customers</div>
+                        <div class="slider-container">
+                            <input type="range" id="winrate-input" min="5" max="50" value="10">
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" id="to-step2">Calculate My ROI</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 2: Plan Selection -->
+        <div class="screen" id="screen2">
+            <div class="plan-screen">
+                <!-- Left: Selection -->
+                <div class="selection-side">
+                    <!-- Unified Plan Selection Card -->
+                    <div class="card">
+                        <div class="card-title">Pick your plan</div>
+
+                        <!-- Contract Length -->
+                        <div class="contract-section">
+                            <div class="contract-option" data-length="1">
+                                <div class="term">1 Month</div>
+                                <div class="discount">+$1K onboarding</div>
+                            </div>
+                            <div class="contract-option selected" data-length="6">
+                                <div class="term">6 Months</div>
+                                <div class="discount">10% off</div>
+                            </div>
+                            <div class="contract-option" data-length="12">
+                                <div class="term">12 Months</div>
+                                <div class="discount">20% off</div>
+                            </div>
+                        </div>
+
+                        <div class="card-divider"
+                            style="height: 1px; background: rgba(255,255,255,0.1); margin: 15px 0;"></div>
+
+                        <!-- Plan Selection - Column Layout -->
+                        <div class="pricing-table-container">
+                            <div class="pricing-columns">
+                                <!-- Starter Column -->
+                                <div class="plan-column" data-plan="starter">
+                                    <div class="plan-column-header">
+                                        <div class="plan-column-name">Starter</div>
+                                        <div class="plan-column-price" id="starter-price">$1,020<span>/mo</span></div>
+                                    </div>
+                                    <div class="plan-features">
+                                        <div class="plan-feature">5 leads/month</div>
+                                        <div class="plan-feature">2,000 contacts</div>
+                                        <div class="plan-feature">200 LI invites</div>
+                                        <div class="plan-feature">2 campaigns</div>
+                                        <div class="plan-feature">Strategy + Deliverability</div>
+                                        <div class="plan-feature">Basic AI</div>
+                                        <div class="plan-feature">Basic filters</div>
+                                    </div>
+                                </div>
+
+                                <!-- PRO Column (Recommended) -->
+                                <div class="plan-column recommended selected" data-plan="pro">
+                                    <div class="recommended-badge">Recommended</div>
+                                    <div class="plan-column-header">
+                                        <div class="plan-column-name">PRO</div>
+                                        <div class="plan-column-price" id="pro-price">$1,428<span>/mo</span></div>
+                                    </div>
+                                    <div class="plan-features">
+                                        <div class="plan-feature">5-10 leads/month</div>
+                                        <div class="plan-feature">3,000 contacts</div>
+                                        <div class="plan-feature">200 LI + messages</div>
+                                        <div class="plan-feature">3 campaigns</div>
+                                        <div class="plan-feature">Strategy + Deliverability</div>
+                                        <div class="plan-feature">Advanced AI</div>
+                                        <div class="plan-feature">AI filters + signals</div>
+                                    </div>
+                                </div>
+
+                                <!-- Scale Column -->
+                                <div class="plan-column" data-plan="scale">
+                                    <div class="plan-column-header">
+                                        <div class="plan-column-name">Scale</div>
+                                        <div class="plan-column-price" id="scale-price">$1,734<span>/mo</span></div>
+                                    </div>
+                                    <div class="plan-features">
+                                        <div class="plan-feature">10+ leads/month</div>
+                                        <div class="plan-feature">4,000 contacts</div>
+                                        <div class="plan-feature">400 LI + messages</div>
+                                        <div class="plan-feature">4+ campaigns</div>
+                                        <div class="plan-feature">Strategy + Deliverability</div>
+                                        <div class="plan-feature">Advanced AI</div>
+                                        <div class="plan-feature">Custom scraping + signals</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-divider"
+                            style="height: 1px; background: rgba(255,255,255,0.1); margin: 15px 0;"></div>
+
+                        <!-- Add-ons Section (Merged) -->
+                        <div class="addons-merged">
+                            <div class="addons-grid">
+                                <div class="addon-row" id="addon-scheduling">
+                                    <div class="addon-row-left">
+                                        <div class="addon-checkbox"></div>
+                                        <div>
+                                            <span class="addon-text">Meeting Scheduling</span>
+                                            <div class="addon-desc">We book meetings directly on your calendar</div>
+                                        </div>
+                                    </div>
+                                    <span class="addon-price">+$300/mo</span>
+                                </div>
+                                <div class="addon-row" id="addon-linkedin-posting">
+                                    <div class="addon-row-left">
+                                        <div class="addon-checkbox"></div>
+                                        <div>
+                                            <span class="addon-text">LinkedIn Posting</span>
+                                            <div class="addon-desc">2 posts per week on your profile</div>
+                                        </div>
+                                    </div>
+                                    <span class="addon-price">+$500/mo</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: ROI Summary -->
+                <div class="roi-side">
+                    <!-- Metrics bar moved here -->
+                    <div class="metrics-bar" style="margin-bottom: 15px;">
+                        <div class="metrics-bar-values">
+                            <span>ACV: <strong id="metrics-acv">$25,000</strong></span>
+                            <span>Win Rate: <strong id="metrics-winrate">20%</strong></span>
+                        </div>
+                        <span class="metrics-bar-edit" id="edit-metrics">← Edit</span>
+                    </div>
+
+                    <div class="roi-card">
+                        <div class="card-title">💰 12-Month ROI Projection</div>
+                        <div class="roi-grid">
+                            <div class="roi-item">
+                                <div class="roi-label">Monthly Leads</div>
+                                <div class="roi-value" id="roi-leads">7.5</div>
+                            </div>
+                            <div class="roi-item">
+                                <div class="roi-label">Monthly Pipeline</div>
+                                <div class="roi-value" id="roi-pipeline">$188K</div>
+                            </div>
+                            <div class="roi-item">
+                                <div class="roi-label">Annual Revenue</div>
+                                <div class="roi-value highlight" id="roi-revenue">$450,000</div>
+                            </div>
+                            <div class="roi-item">
+                                <div class="roi-label">Annual ROI</div>
+                                <div class="roi-value highlight" id="roi-percent">2,525%</div>
+                            </div>
+                            <div class="roi-item full-width">
+                                <div class="roi-label">Cost Per Lead</div>
+                                <div class="roi-value" id="roi-cpl">$190</div>
+                                <div class="roi-subtext">Annual investment: <span id="roi-investment">$17,136</span>
+                                </div>
+                            </div>
+                            <div class="roi-item">
+                                <div class="roi-label">CRM Contacts Growth</div>
+                                <div class="roi-value" id="roi-contacts">36,000</div>
+                            </div>
+                            <div class="roi-item">
+                                <div class="roi-label">LinkedIn Network Growth</div>
+                                <div class="roi-value" id="roi-linkedin">+360</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accept-section">
+                        <button class="btn-primary" id="to-step3">View Timeline & Proposal →</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 3: Results with Chart -->
+        <div class="screen" id="screen3">
+            <div class="results-screen">
+                <div class="results-grid">
+                    <!-- Chart -->
+                    <div class="chart-card">
+                        <div class="chart-title">📈 Expected Lead Generation Timeline</div>
+                        <div class="chart-subtitle">Typical ramp-up: 3-6 months to reach full capacity</div>
+
+                        <div class="chart-container">
+                            <div class="chart-bars" id="chart-bars">
+                                <!-- Bars will be generated by JS -->
+                            </div>
+                        </div>
+
+                        <div class="chart-legend">
+                            <div class="legend-item">
+                                <div class="legend-dot ramp"></div>
+                                <span>Ramp-up period</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-dot full"></div>
+                                <span>Full capacity</span>
+                            </div>
+                        </div>
+
+                        <p class="note-text" style="margin-top: 15px;">
+                            Results vary based on industry, ICP, and market conditions
+                        </p>
+                    </div>
+
+                    <!-- Final Proposal -->
+                    <div class="final-proposal">
+                        <div class="final-proposal-header">
+                            <h3 id="proposal-title">Your Proposal</h3>
+                            <div class="final-badges">
+                                <span class="proposal-badge" id="final-plan">PRO Plan</span>
+                                <span class="proposal-badge secondary" id="final-term">6 Months</span>
+                            </div>
+                        </div>
+
+                        <!-- Swift Decision Promo with Toggle -->
+                        <div class="swift-decision-promo" id="swift-promo">
+                            <div class="swift-promo-header">
+                                <div class="swift-promo-title">
+                                    ⚡ Swift Decision Bonus
+                                    <span class="swift-promo-badge">LIMITED</span>
+                                </div>
+                                <div class="toggle-switch active" id="swift-toggle"></div>
+                            </div>
+                            <div class="swift-promo-desc">
+                                Sign and start before <strong id="swift-deadline">Jan 29, 2026</strong> to get
+                                <strong>10% off</strong> your first payment!
+                            </div>
+                            <div class="swift-promo-savings">
+                                <span class="swift-savings-label">Your savings on first payment:</span>
+                                <span class="swift-savings-value" id="swift-savings">-$857</span>
+                            </div>
+                        </div>
+
+                        <div class="final-payment-grid">
+                            <div class="final-payment-box">
+                                <div class="final-payment-label">📝 Due at Signing</div>
+                                <div class="final-payment-amount" id="final-closing">$8,568</div>
+                                <div class="final-payment-detail" id="final-closing-detail">6 × $1,428/mo</div>
+                            </div>
+                            <div class="final-payment-box">
+                                <div class="final-payment-label">🔄 Renewal (<span id="final-renewal-date">Jul
+                                        2026</span>)</div>
+                                <div class="final-payment-amount" id="final-renewal">$8,568</div>
+                                <div class="final-payment-detail" id="final-renewal-detail">Every 6 months</div>
+                            </div>
+                        </div>
+
+                        <div class="final-roi-row">
+                            <div class="final-roi-item">
+                                <div class="final-roi-label">Annual Revenue</div>
+                                <div class="final-roi-value" id="final-revenue">$450,000</div>
+                            </div>
+                            <div class="final-roi-item">
+                                <div class="final-roi-label">Annual ROI</div>
+                                <div class="final-roi-value" id="final-roi">2,525%</div>
+                            </div>
+                        </div>
+
+                        <button class="btn-compare" id="trigger-compare">
+                            📉 Compare vs. Alternatives
+                        </button>
+
+                        <p class="note-text">
+                            Contract auto-renews. Cancel anytime with 30 days notice.
+                        </p>
+
+                        <div class="back-link">
+                            <a id="back-to-step2">← Modify selection</a>
+                        </div>
+
+                        <button class="btn-print" id="print-proposal">Export Proposal</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Competitor Comparison Modal -->
+    <div class="modal-overlay" id="compare-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Cost vs. Value Comparison</h3>
+                <button class="close-modal" id="close-compare">×</button>
+            </div>
+            <div class="modal-body">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th class="metric-col">Comparison Factor</th>
+                            <th class="growbots-col growbots-header">Growbots</th>
+                            <th>DIY Stack</th>
+                            <th>In-House SDR</th>
+                            <th>Lead Gen Agency</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Section A: Hard Costs -->
+                        <tr class="section-header">
+                            <td colspan="5"
+                                style="background: rgba(255, 255, 255, 0.05); color: #fff; font-weight: 600; padding: 10px 15px; font-size: 0.85rem;">
+                                Hard Costs</td>
+                        </tr>
+                        <tr>
+                            <td class="metric-col">Tools Cost <span
+                                    style="font-weight:400; font-size:0.75rem; color:#8892b0; display:block;">(Data,
+                                    Outreach, Infra)</span></td>
+                            <td class="growbots-col"><span class="positive-attr">Included</span></td>
+                            <td>$500 - $1,000/mo</td>
+                            <td>$500 - $1,000/mo</td>
+                            <td>Hidden (Often not included)</td>
+                        </tr>
+                        <tr>
+                            <td class="metric-col">Human Labor Cost</td>
+                            <td class="growbots-col"><span class="positive-attr">Included</span></td>
+                            <td>Your Time</td>
+                            <td>~$6,000 (Salary)</td>
+                            <td>$3,000 - $5,000</td>
+                        </tr>
+
+                        <!-- Section B: Operational Risk -->
+                        <tr class="section-header">
+                            <td colspan="5"
+                                style="background: rgba(255, 255, 255, 0.05); color: #fff; font-weight: 600; padding: 10px 15px; font-size: 0.85rem;">
+                                Operational Risk</td>
+                        </tr>
+                        <tr>
+                            <td class="metric-col">Deliverability Risk</td>
+                            <td class="growbots-col"><span class="positive-attr">Managed (Safe)</span></td>
+                            <td>High (Domain Burn)</td>
+                            <td>High (Manual)</td>
+                            <td>Managed</td>
+                        </tr>
+                        <tr>
+                            <td class="metric-col">Control & Ownership</td>
+                            <td class="growbots-col"><span class="positive-attr">100% Yours</span></td>
+                            <td>Yours</td>
+                            <td>Yours</td>
+                            <td>None (Agency Owned)</td>
+                        </tr>
+
+                        <!-- Section C: Time Investment -->
+                        <tr class="section-header">
+                            <td colspan="5"
+                                style="background: rgba(255, 255, 255, 0.05); color: #fff; font-weight: 600; padding: 10px 15px; font-size: 0.85rem;">
+                                Time Investment</td>
+                        </tr>
+                        <tr>
+                            <td class="metric-col">Setup Time</td>
+                            <td class="growbots-col">2 weeks</td>
+                            <td>2-4 Weeks</td>
+                            <td>2-3 Months</td>
+                            <td>2-4 Weeks</td>
+                        </tr>
+                        <tr>
+                            <td class="metric-col">Time Required</td>
+                            <td class="growbots-col">2 hrs / week</td>
+                            <td>15+ hrs / week</td>
+                            <td>10+ hrs / week</td>
+                            <td>2 hrs / week</td>
+                        </tr>
+
+                        <!-- Total Row -->
+                        <tr class="total-row" style="border-top: 2px solid rgba(255,255,255,0.1);">
+                            <td class="metric-col" style="color: #00d9ff; font-size: 1rem;">Est. Monthly Total</td>
+                            <td class="growbots-col" style="font-weight: 700; color: #00d9ff; font-size: 1.3rem;">
+                                <span id="total-growbots-val"></span>
+                            </td>
+                            <td style="font-weight: 600;">~$1,000 <span style="font-size:0.8rem; color: #8892b0;">+
+                                    15h/wk</span></td>
+                            <td style="font-weight: 600;">~$7,000 <span style="font-size:0.8rem; color: #8892b0;">+
+                                    10h/wk</span></td>
+                            <td style="font-weight: 600;">$3k-$5k</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                Growbots replaces the data provider, sending tools, and operations manager.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const ONBOARDING_FEE = 1000;
+        const plans = {
+            starter: { name: 'Starter', monthly: 1200, leadsMin: 5, leadsMax: 5, emailContacts: 2000, linkedinContacts: 200, linkedinConversionRate: 0.10 },
+            pro: { name: 'PRO', monthly: 1680, leadsMin: 5, leadsMax: 10, emailContacts: 3000, linkedinContacts: 200, linkedinConversionRate: 0.15 },
+            scale: { name: 'Scale', monthly: 2040, leadsMin: 10, leadsMax: 15, emailContacts: 4000, linkedinContacts: 400, linkedinConversionRate: 0.15 }
+        };
+        const discounts = { 1: 0, 6: 0.10, 12: 0.20 };
+
+        // State
+        let state = {
+            companyName: '',
+            acv: 10000,
+            winRate: 10,
+            plan: 'pro',
+            contractLength: 6,
+            schedulingAddon: false,
+            linkedinPostingAddon: false,
+            swiftPromoEnabled: true
+        };
+
+        // Calculate deadline date (today + 14 days)
+        function getSwiftDeadline() {
+            const d = new Date();
+            d.setDate(d.getDate() + 14);
+            return d;
+        }
+
+        // Get start month for timeline (first day of next month)
+        function getTimelineStartDate() {
+            const d = new Date();
+            return new Date(d.getFullYear(), d.getMonth() + 1, 1);
+        }
+
+        // Format date for display
+        function formatDeadlineDate(date) {
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        // Get month labels for chart
+        function getMonthLabels() {
+            const startDate = getTimelineStartDate();
+            const labels = [];
+            // Use the first day of the start month to avoid date overflow issues
+            const baseDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+            for (let i = 0; i < 12; i++) {
+                const d = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, 1);
+                labels.push(d.toLocaleDateString('en-US', { month: 'short' }));
+            }
+            return labels;
+        }
+
+        // DOM
+        const screens = {
+            1: document.getElementById('screen1'),
+            2: document.getElementById('screen2'),
+            3: document.getElementById('screen3')
+        };
+        const steps = {
+            1: document.getElementById('step1-ind'),
+            2: document.getElementById('step2-ind'),
+            3: document.getElementById('step3-ind')
+        };
+
+        // Utilities
+        function formatCurrency(val, compact = false) {
+            if (compact && val >= 1000000) return '$' + (val / 1000000).toFixed(1) + 'M';
+            if (compact && val >= 1000) return '$' + Math.round(val / 1000) + 'K';
+            return '$' + val.toLocaleString();
+        }
+
+        function formatPercent(val) {
+            return Math.round(val).toLocaleString() + '%';
+        }
+
+        function getMonthlyPrice(planKey) {
+            return plans[planKey].monthly * (1 - discounts[state.contractLength]);
+        }
+
+        function getRenewalDate() {
+            const startDate = getTimelineStartDate();
+            startDate.setMonth(startDate.getMonth() + (state.contractLength === 1 ? 1 : state.contractLength));
+            return startDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        }
+
+        // Navigation
+        function goToScreen(num) {
+            Object.values(screens).forEach(s => s.classList.remove('active'));
+            screens[num].classList.add('active');
+
+            Object.entries(steps).forEach(([key, el]) => {
+                el.classList.remove('active', 'completed');
+                if (parseInt(key) < num) el.classList.add('completed');
+                if (parseInt(key) === num) el.classList.add('active');
+            });
+
+            // Hide header on steps 2 & 3
+            if (num === 1) {
+                document.body.classList.remove('hide-header');
+            } else {
+                document.body.classList.add('hide-header');
+            }
+
+            if (num === 3) renderChart();
+        }
+
+        // Calculations
+        function calculate() {
+            const plan = plans[state.plan];
+
+            // Base leads
+            let monthlyLeads = (plan.leadsMin + plan.leadsMax) / 2;
+
+            // Apply Meeting Scheduling multiplier (1.2x leads)
+            if (state.schedulingAddon) {
+                monthlyLeads *= 1.2;
+            }
+
+            const effectiveMonthly = getMonthlyPrice(state.plan);
+            const addonCost = (state.schedulingAddon ? 300 : 0) + (state.linkedinPostingAddon ? 500 : 0);
+            const totalMonthly = effectiveMonthly + addonCost;
+
+            let annualInvestment = totalMonthly * 12;
+            if (state.contractLength === 1) annualInvestment += ONBOARDING_FEE;
+
+            const monthlyPipeline = monthlyLeads * state.acv;
+            const monthlyClosedDeals = monthlyLeads * (state.winRate / 100);
+            const annualRevenue = monthlyClosedDeals * state.acv * 12;
+            const roi = ((annualRevenue - annualInvestment) / annualInvestment) * 100;
+            const costPerLead = totalMonthly / monthlyLeads;
+
+            const contractMonths = state.contractLength === 1 ? 1 : state.contractLength;
+            let closingAmount = totalMonthly * contractMonths;
+            if (state.contractLength === 1) closingAmount += ONBOARDING_FEE;
+            const renewalAmount = totalMonthly * contractMonths;
+
+            // ICP contacts and LinkedIn network growth
+            const emailContacts = plan.emailContacts * 12; // Annual total contacts
+            const linkedinContacts = plan.linkedinContacts * 12;
+
+            // Apply LinkedIn Posting multiplier (2x growth)
+            let linkedinConversionRate = plan.linkedinConversionRate;
+            if (state.linkedinPostingAddon) {
+                linkedinConversionRate *= 2; // Double the effective growth
+            }
+
+            const linkedinNetworkGrowth = Math.round(linkedinContacts * linkedinConversionRate);
+
+            return {
+                monthlyLeads,
+                monthlyPipeline,
+                annualRevenue,
+                annualInvestment,
+                roi,
+                costPerLead,
+                totalMonthly,
+                closingAmount,
+                renewalAmount,
+                contractMonths,
+                planName: plan.name,
+                emailContacts,
+                linkedinContacts,
+                linkedinNetworkGrowth
+            };
+        }
+
+        // Update UI
+        function updateUI() {
+            const c = calculate();
+
+            // Update prices on plans
+            Object.keys(plans).forEach(key => {
+                const price = getMonthlyPrice(key);
+                const el = document.getElementById(`${key}-price`);
+                if (el) el.innerHTML = formatCurrency(Math.round(price)) + '<span>/mo</span>';
+            });
+
+            // ROI card
+            document.getElementById('roi-leads').textContent = c.monthlyLeads % 1 === 0 ? c.monthlyLeads : c.monthlyLeads.toFixed(1);
+            document.getElementById('roi-pipeline').textContent = formatCurrency(c.monthlyPipeline, true);
+            document.getElementById('roi-revenue').textContent = formatCurrency(c.annualRevenue);
+            document.getElementById('roi-percent').textContent = formatPercent(c.roi);
+            document.getElementById('roi-cpl').textContent = formatCurrency(Math.round(c.costPerLead));
+            document.getElementById('roi-investment').textContent = formatCurrency(Math.round(c.annualInvestment));
+            document.getElementById('roi-contacts').textContent = '+' + c.emailContacts.toLocaleString();
+            document.getElementById('roi-linkedin').textContent = '+' + c.linkedinNetworkGrowth.toLocaleString();
+
+            const termLabel = state.contractLength === 1 ? 'Monthly' : `${state.contractLength} Months`;
+
+            // Final proposal (Step 3)
+            document.getElementById('final-plan').textContent = c.planName + ' Plan';
+            document.getElementById('final-term').textContent = termLabel;
+            document.getElementById('proposal-title').textContent = state.companyName
+                ? `Proposal for ${state.companyName}`
+                : 'Your Proposal';
+
+            // Swift Decision Promo calculations
+            const swiftDiscount = state.swiftPromoEnabled ? 0.10 : 0;
+            const swiftSavings = Math.round(c.closingAmount * swiftDiscount);
+            const closingWithPromo = c.closingAmount - swiftSavings;
+
+            // Update swift promo section
+            document.getElementById('swift-deadline').textContent = formatDeadlineDate(getSwiftDeadline());
+            document.getElementById('swift-savings').textContent = '-' + formatCurrency(swiftSavings);
+
+            const swiftPromo = document.getElementById('swift-promo');
+
+            if (state.swiftPromoEnabled) {
+                swiftPromo.classList.remove('disabled');
+                document.getElementById('final-closing').textContent = formatCurrency(Math.round(closingWithPromo));
+            } else {
+                swiftPromo.classList.add('disabled');
+                document.getElementById('final-closing').textContent = formatCurrency(Math.round(c.closingAmount));
+            }
+
+            document.getElementById('final-closing-detail').textContent = state.contractLength === 1
+                ? `1mo + $1K onboarding`
+                : `${c.contractMonths} × ${formatCurrency(Math.round(c.totalMonthly))}/mo`;
+            document.getElementById('final-renewal-date').textContent = getRenewalDate();
+            document.getElementById('final-renewal').textContent = formatCurrency(Math.round(c.renewalAmount));
+            document.getElementById('final-renewal-detail').textContent = `Every ${state.contractLength === 1 ? 'month' : c.contractMonths + ' months'}`;
+            document.getElementById('final-revenue').textContent = formatCurrency(c.annualRevenue);
+            document.getElementById('final-roi').textContent = formatPercent(c.roi);
+
+            // Metrics bar
+            document.getElementById('metrics-acv').textContent = formatCurrency(state.acv);
+            document.getElementById('metrics-winrate').textContent = state.winRate + '%';
+        }
+
+        // Render ramp-up chart with real month labels
+        function renderChart() {
+            const c = calculate();
+            const targetLeads = c.monthlyLeads;
+            const container = document.getElementById('chart-bars');
+            container.innerHTML = '';
+
+            // Ramp-up percentages over 12 months
+            const rampUp = [0.2, 0.4, 0.6, 0.75, 0.85, 0.95, 1, 1, 1, 1, 1, 1];
+            const months = getMonthLabels();
+
+            // Calculate max bar height as 75% of container height (minus padding for labels)
+            const containerHeight = container.clientHeight || 300;
+            const maxBarHeight = containerHeight * 0.8;
+
+            rampUp.forEach((pct, i) => {
+                const leads = (targetLeads * pct).toFixed(1);
+                const height = Math.max(pct * maxBarHeight, 10);
+                const isRamp = pct < 1;
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'chart-bar-wrapper';
+                wrapper.innerHTML = `
+                    <div class="chart-bar ${isRamp ? 'ramp' : ''}" style="height: ${height}px;">
+                        <div class="chart-bar-value">${leads}</div>
+                    </div>
+                    <div class="chart-bar-label">${months[i]}</div>
+                `;
+                container.appendChild(wrapper);
+            });
+        }
+
+        // Event Listeners
+        document.getElementById('winrate-input').addEventListener('input', function () {
+            document.getElementById('winrate-display-1').textContent = this.value + '%';
+        });
+
+        document.getElementById('to-step2').addEventListener('click', function () {
+            state.companyName = document.getElementById('company-input').value.trim();
+            state.acv = parseInt(document.getElementById('acv-input').value) || 10000;
+            state.winRate = parseInt(document.getElementById('winrate-input').value) || 10;
+            updateUI();
+            goToScreen(2);
+        });
+
+        document.getElementById('edit-metrics').addEventListener('click', () => goToScreen(1));
+        document.getElementById('to-step3').addEventListener('click', () => goToScreen(3));
+        document.getElementById('back-to-step2').addEventListener('click', () => goToScreen(2));
+
+        // Export PDF button
+        // Export Proposal button
+        document.getElementById('print-proposal').addEventListener('click', async () => {
+            const btn = document.getElementById('print-proposal');
+            const originalText = btn.textContent;
+            btn.textContent = 'Generating...';
+
+            try {
+                // Create temporary container
+                const container = document.createElement('div');
+                container.id = 'proposal-export-container';
+                document.body.appendChild(container);
+
+                // Add Header
+                const header = document.createElement('div');
+                header.className = 'export-header';
+                const companyName = state.companyName || 'Your Company';
+                header.innerHTML = `
+                    <h1>Proposal for ${companyName}</h1>
+                    <p class="subtitle" style="color: #8892b0;">Generated on ${new Date().toLocaleDateString()}</p>
+                `;
+                container.appendChild(header);
+
+                // Create Grid
+                const grid = document.createElement('div');
+                grid.className = 'export-grid';
+
+                // 1. Step 2 Left (Selection)
+                const step2Left = document.querySelector('#screen2 .selection-side').cloneNode(true);
+                // Force input values to be visible in clone if checking inputs, but here we mostly have text/divs.
+                // Ensure inputs are read-only or stylized as text if needed, but the current design uses divs for selection display mostly.
+                // We might need to ensure the "selected" states are preserved. cloneNode(true) copies attributes/classes so it should be fine.
+                grid.appendChild(step2Left);
+
+                // 2. Step 2 Right (ROI Summary)
+                const roiSummary = document.querySelector('.roi-card').cloneNode(true);
+                grid.appendChild(roiSummary);
+
+                // 3. Step 3 Left (Chart)
+                const chartCard = document.querySelector('.chart-card').cloneNode(true);
+                // Charts that use canvas might need special handling, but here it looks like HTML bars.
+                // If it was canvas we would need to draw image. The current implementation uses div bars, so clone is fine.
+                grid.appendChild(chartCard);
+
+                // 4. Step 3 Right (Final Proposal)
+                const finalProposal = document.querySelector('.final-proposal').cloneNode(true);
+                grid.appendChild(finalProposal);
+
+                container.appendChild(grid);
+
+                // Add Footer
+                const footer = document.createElement('div');
+                footer.className = 'export-footer';
+                footer.innerHTML = `
+                    <div class="disclaimer" style="margin: 0 auto; max-width: 800px;">
+                        *Projections based on average results from successful customers. Individual results may vary based on industry, target market, and sales process.
+                    </div>
+                `;
+                container.appendChild(footer);
+
+                // Small delay to ensure rendering
+                await new Promise(resolve => setTimeout(resolve, 100));
+
+                // Capture
+                const canvas = await html2canvas(container, {
+                    backgroundColor: '#16213e', // Match theme background
+                    scale: 2, // Higher quality
+                    logging: false,
+                    useCORS: true
+                });
+
+                // Download
+                const link = document.createElement('a');
+                link.download = `Proposal - ${companyName}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+
+                // Cleanup
+                document.body.removeChild(container);
+
+            } catch (err) {
+                console.error('Export failed:', err);
+                alert('Failed to generate export. Please try again.');
+            } finally {
+                btn.textContent = originalText;
+            }
+        });
+
+        // Step indicator navigation
+        document.getElementById('step1-ind').addEventListener('click', () => goToScreen(1));
+        document.getElementById('step2-ind').addEventListener('click', () => {
+            // Only allow going to step 2 if we have valid metrics
+            state.companyName = document.getElementById('company-input').value.trim();
+            state.acv = parseInt(document.getElementById('acv-input').value) || 10000;
+            state.winRate = parseInt(document.getElementById('winrate-input').value) || 10;
+            updateUI();
+            goToScreen(2);
+        });
+        document.getElementById('step3-ind').addEventListener('click', () => {
+            state.companyName = document.getElementById('company-input').value.trim();
+            state.acv = parseInt(document.getElementById('acv-input').value) || 10000;
+            state.winRate = parseInt(document.getElementById('winrate-input').value) || 10;
+            updateUI();
+            goToScreen(3);
+        });
+
+        // Contract options
+        document.querySelectorAll('.contract-option').forEach(opt => {
+            opt.addEventListener('click', function () {
+                document.querySelectorAll('.contract-option').forEach(o => o.classList.remove('selected'));
+                this.classList.add('selected');
+                state.contractLength = parseInt(this.dataset.length);
+                updateUI();
+            });
+        });
+
+        // Plan column options
+        document.querySelectorAll('.plan-column').forEach(opt => {
+            opt.addEventListener('click', function () {
+                document.querySelectorAll('.plan-column').forEach(o => o.classList.remove('selected'));
+                this.classList.add('selected');
+                state.plan = this.dataset.plan;
+                updateUI();
+            });
+        });
+
+        // Add-ons
+        document.getElementById('addon-scheduling').addEventListener('click', function () {
+            state.schedulingAddon = !state.schedulingAddon;
+            this.classList.toggle('selected', state.schedulingAddon);
+            updateUI();
+        });
+
+        document.getElementById('addon-linkedin-posting').addEventListener('click', function () {
+            state.linkedinPostingAddon = !state.linkedinPostingAddon;
+            this.classList.toggle('selected', state.linkedinPostingAddon);
+            updateUI();
+        });
+
+        // Swift Decision Promo toggle
+        document.getElementById('swift-toggle').addEventListener('click', function () {
+            state.swiftPromoEnabled = !state.swiftPromoEnabled;
+            this.classList.toggle('active', state.swiftPromoEnabled);
+            updateUI();
+        });
+
+        // Initialize
+        updateUI();
+
+        // Comparison Modal Logic
+        const modal = document.getElementById('compare-modal');
+        const triggerBtn = document.getElementById('trigger-compare');
+        const closeBtn = document.getElementById('close-compare');
+
+        function openModal() {
+            // Update Growbots cost dynamic value
+            const effectiveMonthly = getMonthlyPrice(state.plan);
+            const addonCost = (state.schedulingAddon ? 300 : 0) + (state.linkedinPostingAddon ? 500 : 0);
+            const totalMonthly = effectiveMonthly + addonCost;
+
+
+
+            // Update Total Row Price
+            const totalValEl = document.getElementById('total-growbots-val');
+            if (totalValEl) totalValEl.textContent = formatCurrency(Math.round(totalMonthly));
+
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        }
+
+        function closeModal() {
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        if (triggerBtn) triggerBtn.addEventListener('click', openModal);
+        if (closeBtn) closeBtn.addEventListener('click', closeModal);
+
+        // Close on click outside
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeModal();
+            });
+        }
+    </script>
+</body>
+
+</html>
